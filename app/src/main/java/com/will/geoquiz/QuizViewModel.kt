@@ -18,6 +18,7 @@ class QuizViewModel: ViewModel() {
     var answerCount = 0
     var correctCount = 0
     val totalCount = questionBank.size
+    var isCheater = false
 
     init {
         Log.d(TAG, "ViewModel init")
@@ -43,7 +44,7 @@ class QuizViewModel: ViewModel() {
     fun moveToPre() {
         currentIndex = (currentIndex - 1) % questionBank.size
         if (currentIndex < 0) {
-            currentIndex += questionBank.size;
+            currentIndex += questionBank.size
         }
     }
 

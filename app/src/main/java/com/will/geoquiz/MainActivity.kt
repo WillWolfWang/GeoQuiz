@@ -1,5 +1,7 @@
 package com.will.geoquiz
 
+import android.app.Activity
+import android.content.Intent
 import android.os.Bundle
 import android.util.Log
 import android.view.Gravity
@@ -14,12 +16,13 @@ import androidx.lifecycle.ViewModelProviders
 
 private const val TAG = "MainActivity"
 private const val KEY_INDEX = "index"
-
+private const val REQUEST_CODE_CHEAT = 0
 class MainActivity : AppCompatActivity() {
     // lateinit 告诉编译器稍后初始化
     private lateinit var btnTrue: Button
     private lateinit var btnFalse: Button
     private lateinit var btnNext: ImageButton
+    private lateinit var btnCheat: Button
     private lateinit var tvQuestion: TextView
 
     // by lazy 只调用一次，并且在 onCreate 之后才被调用
@@ -29,7 +32,7 @@ class MainActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        Log.d(TAG, "onCreate-->");
+        Log.d(TAG, "onCreate-->")
         setContentView(R.layout.activity_main)
         val currentIndex = savedInstanceState?.getInt(KEY_INDEX)?:0
         Log.d(TAG, "savedInstanceState-->$currentIndex")
@@ -39,6 +42,7 @@ class MainActivity : AppCompatActivity() {
         btnTrue = findViewById(R.id.btn_true)
         btnFalse = findViewById(R.id.btn_false)
         btnNext = findViewById(R.id.btn_next)
+        btnCheat = findViewById(R.id.btn_cheat)
         tvQuestion = findViewById(R.id.tv_question)
         tvQuestion.setOnClickListener{
 //            currentIndex = (currentIndex + 1) % questionBank.size
@@ -67,6 +71,15 @@ class MainActivity : AppCompatActivity() {
             updateQuestion()
         }
 
+        btnCheat.setOnClickListener{
+//            val intent = Intent(this, CheatActivity::class.java)
+//            startActivity(intent)
+            val answerIsTrue = quizViewModel.currentQuestionAnswer
+            val intent = CheatActivity.newIntent(this@MainActivity, answerIsTrue)
+//            startActivity(intent)
+            startActivityForResult(intent, REQUEST_CODE_CHEAT)
+        }
+
         findViewById<View>(R.id.btn_pre).setOnClickListener{
             quizViewModel.moveToPre()
             updateQuestion()
@@ -81,33 +94,44 @@ class MainActivity : AppCompatActivity() {
 
     override fun onStart() {
         super.onStart()
-        Log.d(TAG, "onStart-->");
+        Log.d(TAG, "onStart-->")
     }
 
     override fun onResume() {
         super.onResume()
-        Log.d(TAG, "onResume-->");
+        Log.d(TAG, "onResume-->")
     }
 
     override fun onPause() {
         super.onPause()
-        Log.d(TAG, "onPause-->");
+        Log.d(TAG, "onPause-->")
     }
 
     override fun onSaveInstanceState(outState: Bundle) {
         super.onSaveInstanceState(outState)
-        Log.d(TAG, "onSaveInstanceState-->");
+        Log.d(TAG, "onSaveInstanceState-->")
         outState.putInt(KEY_INDEX, quizViewModel.currentIndex)
     }
 
     override fun onStop() {
         super.onStop()
-        Log.d(TAG, "onStop-->");
+        Log.d(TAG, "onStop-->")
     }
 
     override fun onDestroy() {
         super.onDestroy()
-        Log.d(TAG, "onDestroy-->");
+        Log.d(TAG, "onDestroy-->")
+    }
+
+    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
+        super.onActivityResult(requestCode, resultCode, data)
+        Log.e(TAG, "resultCode-->$resultCode")
+        if (resultCode != Activity.RESULT_OK) {
+            return
+        }
+        if (requestCode == REQUEST_CODE_CHEAT) {
+            quizViewModel.isCheater = data?.getBooleanExtra(EXTRA_ANSWER_SHOWN, false)?:false
+        }
     }
 
     private fun updateQuestion() {
@@ -118,13 +142,23 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun checkAnswer(userAnswer: Boolean) {
-        val correctAnswer = quizViewModel.currentQuestionAnswer;
+        val correctAnswer = quizViewModel.currentQuestionAnswer
 
-        val messageResId = if (correctAnswer == userAnswer) {
+//        val messageResId = if (correctAnswer == userAnswer) {
+//            quizViewModel.correctCount++
+//            R.string.correct_toast
+//        } else {
+//            R.string.incorrect_toast
+//        }
+        if (correctAnswer == userAnswer) {
             quizViewModel.correctCount++
-            R.string.correct_toast
-        } else {
-            R.string.incorrect_toast
+        }
+
+        val messageResId = when {
+            quizViewModel.isCheater  -> R.string.judgment_toast
+            userAnswer == correctAnswer ->
+                R.string.correct_toast
+            else -> R.string.incorrect_toast
         }
 
         quizViewModel.answerCount++
@@ -134,5 +168,6 @@ class MainActivity : AppCompatActivity() {
         if (quizViewModel.answerCount == quizViewModel.totalCount) {
             Toast.makeText(this, "Score:" + quizViewModel.correctCount * 1.0f / quizViewModel.answerCount * 100 + "%", Toast.LENGTH_SHORT).show()
         }
+        quizViewModel.isCheater = false
     }
 }
